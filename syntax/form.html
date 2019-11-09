@@ -1,0 +1,13 @@
+<!--form안에 있는 각각의 control들에 사용자가 입력한 정보를 
+submit 버튼을 눌렀을 때, action속성이 가리키는 서버로 
+쿼리스트링 형태로 데이터를 전송-->
+<form action="http://localhost:3000/process_create"
+method="post">
+<p><input type="text" name="title"></p>
+<p>
+    <textarea name="description"></textarea>
+</p>
+<p>
+    <input type="submit">
+</p>
+</form>
