@@ -14,6 +14,7 @@ function templateHTML(title, list, body) {
   <body>
     <h1><a href="/">WEB</a></h1>
     ${list}
+    <a href="/create">create</a>
     ${body}
   </body>
   </html>
