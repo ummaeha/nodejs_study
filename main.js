@@ -4,7 +4,7 @@ var fs = require('fs');
 var url = require('url'); //url이라는 모듈을 url이라는 변수를 통해 사용할거다
 var qs = require('querystring');
 
-function templateHTML(title, list, body) {
+function templateHTML(title, list, body, control) {
   return ` 
   <!doctype html>
   <html>
@@ -15,7 +15,7 @@ function templateHTML(title, list, body) {
   <body>
     <h1><a href="/">WEB</a></h1>
     ${list}
-    <a href="/create">create</a>
+    ${control}
     ${body}
   </body>
   </html>
@@ -47,7 +47,10 @@ var app = http.createServer(function(request,response){
             var description = 'Hello, Node.js!'
             var list = templateLIST(filelist);
             //1단제목은 동적으로, 웹페이지 내용은 정적으로 만드는데 성공!
-            var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+            var template = templateHTML(title, list, 
+              `<h2>${title}</h2>${description}`,
+              `<a href="/create">create</a>` //control 부분
+              );
             response.writeHead(200);
             response.end(template);
             })
@@ -57,7 +60,10 @@ var app = http.createServer(function(request,response){
               var list = templateLIST(filelist);
               fs.readFile(`data/${queryData.id}`,'utf8',function(err,description){
                 var title = queryData.id;
-                var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+                var template = templateHTML(title, list, 
+                  `<h2>${title}</h2>${description}`,
+                  `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
+                  );
                 response.writeHead(200);
                 response.end(template);
             });
@@ -69,7 +75,7 @@ var app = http.createServer(function(request,response){
             //${body}에 들어가는 부분
             var list = templateLIST(filelist);
             var template = templateHTML(title, list, `
-              <form action="http://localhost:3000/create_process" method="post"> 
+              <form action="/create_process" method="post"> 
               <p><input type="text" name="title" placeholder="title"></p>
               <p>
                   <textarea name="description" placeholder="description"></textarea>
@@ -78,7 +84,7 @@ var app = http.createServer(function(request,response){
                   <input type="submit">
               </p>
               </form>
-            `);
+            `,'');
             response.writeHead(200);
             response.end(template);
             });
@@ -93,9 +99,37 @@ var app = http.createServer(function(request,response){
           var post = qs.parse(body); //post라는 변수에 지금까지의 정보를 넣어줌 {title : 'Node.js'} -> 이런식으로 터미널에 출력됨
           var title = post.title;
           var description = post.description;
+          fs.writeFile(`data/${title}`, description,'utf8',function(err){
+            response.writeHead(302, {Location:`/?id=${title}`});
+            //response.writeHead(200); //200 -> 성공했다는 뜻!
+            response.end(); //파일 생성이 완료되면 success
+          })
         });
-        response.writeHead(200);
-        response.end('success');
+
+      } else if(pathname === '/update'){
+        fs.readdir('./data', function(error, filelist){
+          var list = templateLIST(filelist);
+          fs.readFile(`data/${queryData.id}`,'utf8',function(err,description){
+            var title = queryData.id;
+            var template = templateHTML(title, list, 
+              `
+              <form action="/update_process" method="post"> 
+              <input type="hidden" name="id" value="${title}"> 
+              <p><input type="text" name="title" placeholder="title" value="${title}"></p>
+              <p>
+                  <textarea name="description" placeholder="description">${description}</textarea>
+              </p>
+              <p>
+                  <input type="submit">
+              </p>
+              </form>
+              `,
+              `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
+              );
+            response.writeHead(200);
+            response.end(template);
+        });
+      });
       } else {
         response.writeHead(404);
         response.end('Not Found');
