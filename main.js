@@ -1,36 +1,39 @@
 //조건에 따라 다르게 동작하는 어플리케이션 
+//step3 : template 이라고 동일하게 이름붙여진 애들을 객체로 정리해보겠음!
 var http = require('http'); //node.js 가 가지고있는 모듈을 가져오는 것
 var fs = require('fs');
 var url = require('url'); //url이라는 모듈을 url이라는 변수를 통해 사용할거다
 var qs = require('querystring');
 
-function templateHTML(title, list, body, control) {
-  return ` 
-  <!doctype html>
-  <html>
-  <head>
-    <title>WEB1 - ${title}</title>
-    <meta charset="utf-8">
-  </head>
-  <body>
-    <h1><a href="/">WEB</a></h1>
-    ${list}
-    ${control}
-    ${body}
-  </body>
-  </html>
-  `;
-}
-function templateLIST(filelist) {
-  //[ 'CSS', 'HTML', 'JavaScript' ]라고 data 디렉토리에 있는 파일들이 담겨있는 리스트인 filelist에서 불러옴
-  var list = '<ul>';
-  var i = 0 ;
-  while(i < filelist.length) {
-    list = list + `<li><a href="/?id=${filelist[i]}"> ${filelist[i]}</a></li>`;
-    i = i + 1;
+var template = {
+  html:function(title, list, body, control) {
+    return ` 
+    <!doctype html>
+    <html>
+    <head>
+      <title>WEB1 - ${title}</title>
+      <meta charset="utf-8">
+    </head>
+    <body>
+      <h1><a href="/">WEB</a></h1>
+      ${list}
+      ${control}
+      ${body}
+    </body>
+    </html>
+    `;
+  },
+  list:function templateLIST(filelist) {
+    //[ 'CSS', 'HTML', 'JavaScript' ]라고 data 디렉토리에 있는 파일들이 담겨있는 리스트인 filelist에서 불러옴
+    var list = '<ul>';
+    var i = 0 ;
+    while(i < filelist.length) {
+      list = list + `<li><a href="/?id=${filelist[i]}"> ${filelist[i]}</a></li>`;
+      i = i + 1;
+    }
+    list = list + '</ul>';
+    return list;
   }
-  list = list + '</ul>';
-  return list;
 }
 
 var app = http.createServer(function(request,response){
@@ -45,14 +48,22 @@ var app = http.createServer(function(request,response){
           //console.log(filelist); 로그 찍어보면 [ 'CSS', 'HTML', 'JavaScript' ]가 나옴
             var title ='Welcome';
             var description = 'Hello, Node.js!'
-            var list = templateLIST(filelist);
+            /*var list = templateLIST(filelist);
             //1단제목은 동적으로, 웹페이지 내용은 정적으로 만드는데 성공!
             var template = templateHTML(title, list, 
               `<h2>${title}</h2>${description}`,
               `<a href="/create">create</a>` //control 부분
               );
             response.writeHead(200);
-            response.end(template);
+            response.end(template);*/
+            //template 객체를 작성하면서 새로 쓴 부분
+            var list = template.list(filelist);
+            var html = template.html(title, list, 
+              `<h2>${title}</h2>${description}`,
+              `<a href="/create">create</a>`
+              );
+            response.writeHead(200);
+            response.end(html);
             })
       //}); 
         } else { //id 값이 있을 때
