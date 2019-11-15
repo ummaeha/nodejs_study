@@ -4,37 +4,10 @@ var http = require('http'); //node.js 가 가지고있는 모듈을 가져오는
 var fs = require('fs');
 var url = require('url'); //url이라는 모듈을 url이라는 변수를 통해 사용할거다
 var qs = require('querystring');
-
-var template = {
-  html:function(title, list, body, control) {
-    return ` 
-    <!doctype html>
-    <html>
-    <head>
-      <title>WEB1 - ${title}</title>
-      <meta charset="utf-8">
-    </head>
-    <body>
-      <h1><a href="/">WEB</a></h1>
-      ${list}
-      ${control}
-      ${body}
-    </body>
-    </html>
-    `;
-  },
-  list:function templateLIST(filelist) {
-    //[ 'CSS', 'HTML', 'JavaScript' ]라고 data 디렉토리에 있는 파일들이 담겨있는 리스트인 filelist에서 불러옴
-    var list = '<ul>';
-    var i = 0 ;
-    while(i < filelist.length) {
-      list = list + `<li><a href="/?id=${filelist[i]}"> ${filelist[i]}</a></li>`;
-      i = i + 1;
-    }
-    list = list + '</ul>';
-    return list;
-  }
-}
+//모듈화
+var template = require('./lib/template.js');
+var path = require('path');
+var sanitizeHTML = require('sanitize-html');
 
 var app = http.createServer(function(request,response){
     var _url = request.url;
@@ -68,21 +41,25 @@ var app = http.createServer(function(request,response){
       //}); 
         } else { //id 값이 있을 때
           fs.readdir('./data', function(error, filelist){
-            fs.readFile(`data/${queryData.id}`,'utf8',function(err,description){
+            var filteredId = path.parse(queryData.id).base;
+            fs.readFile(`data/${filteredId}`,'utf8',function(err, description){
               var title = queryData.id;
-              var list = templateLIST(filelist);
-              var template = templateHTML(title, list, 
-                `<h2>${title}</h2>${description}`,
+              var sanitizedTitle = sanitizeHTML(title); 
+              var sanitizedDescription = sanitizeHTML(description, {
+                allowedTags:['h1'] //h1 태그는 살균하지 않고 허용!
+              }); //태그를 살균해줌
+              var list = template.list(filelist);
+              var html = template.html(title, list, 
+                `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
                 ` <a href="/create">create</a> 
-                  <a href="/update?id=${title}">update</a>
+                  <a href="/update?id=${sanitizedTitle}">update</a>
                   <form action="/delete_process" method="post">
-                    <input type="hidden" name="id" value="${title}">
+                    <input type="hidden" name="id" value="${sanitizedTitle}">
                     <input type="submit" value="delete">
-                  </form>
-                `
+                  </form>`
                 );
               response.writeHead(200);
-              response.end(template);
+              response.end(html);
             });
           });
         } 
@@ -90,8 +67,8 @@ var app = http.createServer(function(request,response){
         fs.readdir('./data', function(error, filelist){
             var title ='WEB - create';
             //${body}에 들어가는 부분
-            var list = templateLIST(filelist);
-            var template = templateHTML(title, list, `
+            var list = template.list(filelist);
+            var html = template.html(title, list, `
               <form action="/create_process" method="post"> 
               <p><input type="text" name="title" placeholder="title"></p>
               <p>
@@ -103,7 +80,7 @@ var app = http.createServer(function(request,response){
               </form>
             `,'');
             response.writeHead(200);
-            response.end(template);
+            response.end(html);
             });
       } else if(pathname === '/create_process') {
         //form 에서 post형식으로 작성된 내용을 nodejs 로 가져오려면 어떻게 해야할 것인가?
@@ -125,10 +102,11 @@ var app = http.createServer(function(request,response){
 
       } else if(pathname === '/update'){
         fs.readdir('./data', function(error, filelist){
-          var list = templateLIST(filelist);
-          fs.readFile(`data/${queryData.id}`,'utf8',function(err,description){
+          var list = template.list(filelist);
+          var filteredId = path.parse(queryData.id).base;
+          fs.readFile(`data/${filteredId}`,'utf8',function(err,description){
             var title = queryData.id;
-            var template = templateHTML(title, list, 
+            var html = template.html(title, list, 
               `
               <form action="/update_process" method="post"> 
               <input type="hidden" name="id" value="${title}"> 
@@ -144,12 +122,12 @@ var app = http.createServer(function(request,response){
               `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
               );
             response.writeHead(200);
-            response.end(template);
+            response.end(html);
         });
       });
       } else if (pathname ==='/update_process'){
-            var body = ''; 
-            request.on('data', function(data){ 
+          var body = ''; 
+          request.on('data', function(data){ 
             body = body + data; 
           });
           request.on('end', function(){ 
@@ -174,14 +152,15 @@ var app = http.createServer(function(request,response){
         request.on('end', function(){ 
           var post = qs.parse(body); 
           var id = post.id;
-          fs.unlink(`data/${id}`,function(error){
+          var filteredId = path.parse(id).base;
+          fs.unlink(`data/${filteredId}`,function(error){
             response.writeHead(302, {Location:`/`});
             response.end(); 
           })
-        }); 
-      } else {
+      }); 
+      }else {
       response.writeHead(404);
       response.end('Not Found');
       }
 });
-app.listen(3001);
+app.listen(300);
